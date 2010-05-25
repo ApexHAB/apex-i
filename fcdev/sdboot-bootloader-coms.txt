@@ -1,0 +1,11 @@
+bootload -c "console=ttyAM0,115200 root=/dev/sdcard0/disc0/part3" vmlinux.bin
+
+bootload -c "console=ttyAM0,115200 init=/bin/sh root=/root" zImage
+
+bootload -c "root=/dev/mtdblock1 console=ttyAM0,115200" zImage
+
+bootload -c "root=/dev/sdcard0/disc0/part3 console=ttyAM0,115200" /root/zImage
+
+bootload -c "root=/mnt/root/root console=ttyAM0,115200" /root/zImage
+
+bootload -c "root=/mnt/root/root console=ttyAM0,115200" -r "/dev/rd/0" /root/zImage

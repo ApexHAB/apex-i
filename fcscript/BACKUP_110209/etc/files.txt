@@ -1,0 +1,2 @@
+/root/etc/cutdown
+/root/etc/altitude

@@ -1,0 +1,3 @@
+source /root/ts7xxx.subr
+
+led0 0

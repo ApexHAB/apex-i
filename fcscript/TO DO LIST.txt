@@ -1,0 +1,27 @@
+run "crontab -r" on startup and shutdown
+
+*	*	*	*	*	perl /root/flight/flight1.pl
+*	*	*	*	*	/usr/bin/perl /root/flight/flight1.pl
+
+system("crontab /root/cron/flight.cron");
+system("crontab /root/cron/nocron.cron"); <--- blank file
+
+flightc.pl - combine flight1.pl and logic.pl
+
+make a file tree of the balloon files on the FPC
+
+take an SD card image
+
+balloonboot:
+-----------
+perl /root/flight/boot.pl (waits for gps lock, sets time, pings pic, 5 secs siren)
+crontab -r + shutdown
+
+pic stuff:
+--------------
+C111 - "ITxxxxOTxxxxPPxxxxEND",cr,lf
+"take a picture now" routine
+
+AGWPE:
+--------------
+turn OFF the squelch for AGWPE ops!

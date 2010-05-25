@@ -1,0 +1,19 @@
+This is normal make modules-install tries to generate the modules dependancy file. Ususally this is done by running depmod but the depmod and the modules you made are not for a x86 arch so you cannot do this correctly on your x86 system. In short, the errors are normal.
+
+To generate the dependancy file find depmod.pl in the buildroot tree an use it like so
+
+depmod.pl -b /lib/modules/<version-you-just-made>/ -k /usr/src/linux/vmlinux -F /usr/src/linux/System.map
+
+This assumes /usr/src/linux is your current kernel tree you are working on.
+
+After you have done this I suggest you strip your moduels to reduce them in size.
+
+cd /lib/modules/<version>/kernel
+mipsel-linux-strip -g *
+
+Do this for all the sub folders that contain modules
+
+The -g flag is important if you do not use it you will not be able to load your modules. You will not eb able to run depmod after you strip teh moduels so make it beforehand.
+
+Hope it helps,
+Cheers.

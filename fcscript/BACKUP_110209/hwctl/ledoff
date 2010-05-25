@@ -1,0 +1,10 @@
+source /root/ts7xxx.subr
+
+function new()
+{
+echo "Both LEDs off"
+}
+
+led0 0
+led1 0
+new

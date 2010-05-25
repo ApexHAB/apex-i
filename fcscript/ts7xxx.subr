@@ -1,0 +1,286 @@
+# Copyright (c) 2006, Technologic Systems.
+# All rights reserved.
+
+# Important: You must set the "model" environment variable before running
+# some of the shell functions in this script, e.g.
+# export model=2
+# The value to use depends on which board you have:
+# 7260:2
+# 7300:3
+# 7400:4
+
+# Note: Be sure you have 64-bit arithmetic compiled into your shell, or some
+# of these functions will fail (e.g. for ADDRESS > 0x7FFFFFFF)
+
+# bit_set BIT_WIDTH ADDRESS BIT_NUMBER
+bit_set() {
+	local MASK VAL
+	let MASK=1\<\<$3
+	let VAL=`peekpoke $1 $2`
+	let VAL=$MASK\|$VAL
+	peekpoke $1 $2 $VAL
+}
+
+# bit_clr BIT_WIDTH ADDRESS BIT_NUMBER
+bit_clr() {
+	local MASK VAL
+	let MASK=1\<\<$3
+	let VAL=`peekpoke $1 $2`
+	let VAL=~$MASK\&$VAL
+	peekpoke $1 $2 $VAL
+}
+
+# bit_get BIT_WIDTH ADDRESS BIT_NUMBER
+bit_get() {
+	local MASK VAL
+	let MASK=1\<\<$3
+	let VAL=`peekpoke $1 $2`
+	let VAL=$VAL\>\>$3
+	let VAL=$VAL\&1
+	echo $VAL
+}
+
+# dio_dir_get DIO_NUM(0..15)	TS-7400
+# dio_dir_get DIO_NUM(0..8)	TS-7260/TS-7300
+dio_dir_get() {
+	local TMP ADRS
+
+	if test "$model" = "4"; then
+		if test $1 -gt 7; then
+			let TMP=$1-8
+			let ADRS=0x12C00001
+		else
+			let TMP=$1
+			let ADRS=0x12C00000
+		fi
+	elif test "$model" = "2" -o "$model" = "3"; then
+		if test $1 -gt 7; then
+			let TMP=2
+			let ADRS=0x80840034
+		else
+			let TMP=$1
+			let ADRS=0x80840014
+		fi			
+	fi
+
+	bit_get 8 $ADRS $TMP
+}
+
+# dio_dir_set DIO_NUM(0..15) DIR(0=input,1=output)	TS-7400
+# dio_dir_set DIO_NUM(0..8) DIR(0=input,1=output)	TS-7260/TS-7300
+dio_dir_set() {
+	local TMP ADRS
+
+	if test "$model" = "4"; then
+		if test $1 -gt 7; then
+			let TMP=$1-8
+			let ADRS=0x12C00001
+		else
+			let TMP=$1
+			let ADRS=0x12C00000
+		fi
+	elif test "$model" = "2" -o "$model" = "3"; then
+		if test $1 -gt 7; then
+			let TMP=1
+			let ADRS=0x80840034
+		else
+			let TMP=$1
+			let ADRS=0x80840014
+		fi
+	fi
+
+	if test $2 -eq 0; then
+		bit_clr 8 $ADRS $TMP
+	else
+		bit_set 8 $ADRS $TMP
+	fi
+}
+
+# dio_data_get DIO_NUM(0..15)	TS-7400
+# dio_data_get DIO_NUM(0..8)	TS-7260/TS-7300
+dio_data_get() {
+	local ADRS TMP VAL
+
+	if test "$model" = "4"; then
+		if test $1 -gt 7; then
+			let TMP=$1-8
+			let ADRS=0x12C00003
+		else
+			let TMP=$1
+			let ADRS=0x12C00002
+		fi
+	elif test "$model" = "2" -o "$model" = "3"; then
+		if test $1 -gt 7; then
+			let TMP=1
+			let ADRS=0x80840030
+		else
+			let TMP=$1
+			let ADRS=0x80840004
+		fi
+	fi
+
+	bit_get 8 $ADRS $TMP
+}
+
+# dio_data_set DIO_NUM(0..15) 0|1	TS-7400
+# dio_data_set DIO_NUM(0..8) 0|1	TS-7260/TS-7300
+dio_data_set() {
+	local ADRS TMP VAL
+
+	if test "$model" = "4"; then
+		if test $1 -gt 7; then
+			let TMP=$1-8
+			let ADRS=0x12C00003
+		else
+			let TMP=$1
+			let ADRS=0x12C00002
+		fi
+	elif test "$model" = "2" -o "$model" = "3"; then
+		if test $1 -gt 7; then
+			let TMP=1
+			let ADRS=0x80840030
+		else
+			let TMP=$1
+			let ADRS=0x80840004
+		fi
+	fi
+
+
+	if test "$2" = "1"; then
+		bit_set 8 $ADRS $TMP
+	else
+		bit_clr 8 $ADRS $TMP
+	fi
+}
+
+# usb_init
+usb_init() {
+	bit_set 32 0x80930004 28 > /dev/null
+	bit_clr 32 0x80020004 6 > /dev/null
+	bit_set 32 0x80020004 7 > /dev/null
+}
+
+# usb_off
+usb_off() {
+	bit_clr 32 0x80930004 28 > /dev/null
+}
+
+# usb_numports
+usb_numports() {
+	local NUM
+
+	let NUM=`peekpoke 32 0x80020048`
+	let NUM=NUM\&255
+	echo $NUM
+}
+
+# usb_port_devexists PORTNUM(zero indexed)
+usb_port_devexists() {
+	local ADDR
+
+	let ADDR=0x80020054
+	let ADDR=$ADDR+4*$1
+	bit_get 32 $ADDR 0
+}
+
+eth_off() {
+	bit_set 32 0x80840044 2 > /dev/null
+	bit_clr 32 0x80840040 2 > /dev/null
+}
+
+eth_on() {
+	bit_set 32 0x80840040 2 > /dev/null
+}
+
+led0() {
+	if test "$1" = "0"; then
+		bit_clr 32 0x80840020 0 > /dev/null
+	else
+		bit_set 32 0x80840020 0 > /dev/null
+	fi
+}
+
+led1() {
+	if test "$1" = "0"; then
+		bit_clr 32 0x80840020 1 > /dev/null
+	else
+		bit_set 32 0x80840020 1 > /dev/null
+	fi
+}
+
+# 200/100
+cpu_speed_max() {
+	peekpoke 32 0x80930020 0x02a4bb36 > /dev/null
+	peekpoke 32 0x80060008 0x30D > /dev/null
+}
+
+# 166/66
+cpu_speed_166() {
+	peekpoke 32 0x80930020 0x02b4fa5a > /dev/null
+	peekpoke 32 0x80060008 0x203 > /dev/null
+}
+
+# 41.5Mhz
+cpu_speed_42() {
+	peekpoke 32 0x80930020 0x0296fa5a > /dev/null
+	peekpoke 32 0x80060008 0x144 > /dev/null
+}
+
+# 14.7456Mhz
+cpu_speed_min() {
+	peekpoke 32 0x80930020 0 > /dev/null
+	peekpoke 32 0x80060008 0x73 > /dev/null
+}
+
+
+load_ts7300() {
+	if test "$model" = "3"; then
+		load7300 "$@"
+	fi
+}
+
+tshelp() {
+
+	echo "Technologic Systems TS-7xxx Linux miniroot commands:"
+	echo "===================================================="
+	echo
+	echo "'save' - save current miniroot initrd configuration to flash"
+	echo "'exit' - start full Linux boot or exits telnet session"
+	echo "'dio_dir_get DIO_NUM' - Get Data Direction Register"
+	echo "'dio_dir_set DIO_NUM DIR' - Set Data Direction Register"
+	echo "'dio_data_get DIO_NUM' - Get Data Register"
+	echo "'dio_dat_set DIO_NUM DATA - Set Data Register"
+	echo "'usb_init' - Initialize USB"
+	echo "'usb_off' - Disable USB Clock"
+	echo "'usb_num_ports' - Get number of USB ports"
+	echo "'usb_port_devexists' - Check if a USB device is present"
+	echo "'eth_off' - Disable Ethernet(power down phy)"
+	echo "'eth_on' - Enable Ethernet"
+	echo "'led0 STATE' - Turn on/off green LED"
+	echo "'led1_STATE' - Turn on/off red LED"
+	echo "'temp_read' - Print temp (requires optional temp sensor)"
+}
+
+# returns temperature reading in degrees C
+temp_read() {
+	local RAW
+	local TC
+
+	(
+	peekpoke 32 0x808A0004 0x10
+	peekpoke 32 0x808A0000 0x0F
+	peekpoke 32 0x808A0010 0xFE
+	peekpoke 32 0x808A0004 0x00
+	peekpoke 32 0x808A0004 0x10
+	peekpoke 32 0x80840034 0x04
+	peekpoke 32 0x80840030 0x00
+	peekpoke 32 0x808A0008 0x8000
+	peekpoke 32 0x80840034 0x00
+	) >/dev/null
+	RAW=`peekpoke 32 0x808A0008`
+	let TC="$RAW >> 7"
+	echo -n $TC.
+	let TC="$RAW & 127"
+	let TC="$TC*10/128"
+	echo $TC
+}
